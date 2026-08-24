@@ -67,8 +67,8 @@ jobs:
           mkdir -p /tmp/lxmusic_extracted
           unzip -o /tmp/lxmusic.zip -d /tmp/lxmusic_extracted
 
-          # 找到"推荐"文件夹（zip 内层目录名可能带版本前缀）
-          RECOMMEND_DIR=$(find /tmp/lxmusic_extracted -maxdepth 2 \
+          # 找到"推荐"文件夹（不限层级，兼容不同 zip 内层目录结构）
+          RECOMMEND_DIR=$(find /tmp/lxmusic_extracted \
             -type d -name "推荐" | head -1)
 
           if [ -z "$RECOMMEND_DIR" ]; then
