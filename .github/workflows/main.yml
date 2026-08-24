@@ -64,15 +64,34 @@ jobs:
 
       - name: Extract 推荐 folder from zip
         run: |
-          mkdir -p /tmp/lxmusic_extracted
-          unzip -o /tmp/lxmusic.zip -d /tmp/lxmusic_extracted
+          export LANG=en_US.UTF-8
+          export LC_ALL=en_US.UTF-8
 
-          # 找到"推荐"文件夹（不限层级，兼容不同 zip 内层目录结构）
-          RECOMMEND_DIR=$(find /tmp/lxmusic_extracted \
-            -type d -name "推荐" | head -1)
+          mkdir -p /tmp/lxmusic_extracted
+          unzip -O UTF-8 -o /tmp/lxmusic.zip -d /tmp/lxmusic_extracted
+
+          echo "=== 解压后的目录结构 ==="
+          find /tmp/lxmusic_extracted -type d
+
+          # 取 zip 内的顶层版本目录（如 V260817）
+          TOP_DIR=$(ls /tmp/lxmusic_extracted/ | head -1)
+          echo "Top dir: $TOP_DIR"
+
+          # 列出顶层目录下的所有子目录，找包含"推荐"的那个
+          RECOMMEND_DIR=""
+          while IFS= read -r -d '' dir; do
+            dirname=$(basename "$dir")
+            echo "Checking dir: $dirname"
+            if echo "$dirname" | grep -q "推荐"; then
+              RECOMMEND_DIR="$dir"
+              break
+            fi
+          done < <(find "/tmp/lxmusic_extracted/$TOP_DIR" -maxdepth 1 -mindepth 1 -type d -print0)
 
           if [ -z "$RECOMMEND_DIR" ]; then
             echo "❌ 未找到「推荐」文件夹，退出"
+            echo "现有子目录："
+            ls -la "/tmp/lxmusic_extracted/$TOP_DIR/"
             exit 1
           fi
 
