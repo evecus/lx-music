@@ -30,13 +30,13 @@ jobs:
             ZIP_URL="https://github.com/guoyue2010/lxmusic-/archive/refs/tags/${TAG}.zip"
           fi
 
-          echo "tag=$TAG"     >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"         >> "$GITHUB_OUTPUT"
           echo "zip_url=$ZIP_URL" >> "$GITHUB_OUTPUT"
           echo "Latest tag: $TAG"
           echo "ZIP URL   : $ZIP_URL"
 
-      # ── 2. 检出本仓库的 release 分支（不存在则自动创建空分支）──────────
-      - name: Checkout default branch first
+      # ── 2. 检出本仓库（含完整历史，用于读写 last_tag 文件）────────────
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -46,7 +46,47 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
+      # ── 3. 读取上次成功的 tag，与最新 tag 比较 ──────────────────────
+      - name: Compare tags
+        id: compare
+        run: |
+          NEW_TAG="${{ steps.release.outputs.tag }}"
+
+          # 尝试从默认分支的 .last_synced_tag 文件读取上次 tag
+          LAST_TAG=""
+          if [ -f ".last_synced_tag" ]; then
+            LAST_TAG=$(cat .last_synced_tag | tr -d '[:space:]')
+          fi
+
+          echo "Last synced tag : ${LAST_TAG:-<none>}"
+          echo "Latest upstream : $NEW_TAG"
+
+          # 用 sort -V（版本号排序）判断 NEW_TAG 是否严格大于 LAST_TAG
+          if [ -z "$LAST_TAG" ]; then
+            # 从未同步过，直接执行
+            SHOULD_RUN=true
+          else
+            HIGHER=$(printf '%s\n%s\n' "$LAST_TAG" "$NEW_TAG" \
+              | sort -V | tail -1)
+            if [ "$HIGHER" = "$NEW_TAG" ] && [ "$NEW_TAG" != "$LAST_TAG" ]; then
+              SHOULD_RUN=true
+            else
+              SHOULD_RUN=false
+            fi
+          fi
+
+          echo "should_run=$SHOULD_RUN" >> "$GITHUB_OUTPUT"
+          echo "Should run: $SHOULD_RUN"
+
+      - name: Skip if tag not updated
+        if: steps.compare.outputs.should_run == 'false'
+        run: |
+          echo "✅ 上游 tag 未更新（${{ steps.release.outputs.tag }}），无需同步，退出。"
+          exit 0
+
+      # ── 4. 切换到 release 分支（不存在则创建）───────────────────────
       - name: Checkout or create release branch
+        if: steps.compare.outputs.should_run == 'true'
         run: |
           if git ls-remote --exit-code --heads origin release; then
             git checkout release
@@ -57,12 +97,14 @@ jobs:
             git push origin release
           fi
 
-      # ── 3. 下载并解压上游 zip ─────────────────────────────────────────
+      # ── 5. 下载并解压上游 zip ─────────────────────────────────────────
       - name: Download upstream release zip
+        if: steps.compare.outputs.should_run == 'true'
         run: |
           curl -fsSL "${{ steps.release.outputs.zip_url }}" -o /tmp/lxmusic.zip
 
       - name: Extract 推荐 folder from zip
+        if: steps.compare.outputs.should_run == 'true'
         run: |
           export LANG=en_US.UTF-8
           export LC_ALL=en_US.UTF-8
@@ -98,16 +140,17 @@ jobs:
           echo "Found 推荐 dir: $RECOMMEND_DIR"
           echo "RECOMMEND_DIR=$RECOMMEND_DIR" >> "$GITHUB_ENV"
 
-      # ── 4. 清空 release 分支上的旧文件 ───────────────────────────────
+      # ── 6. 清空 release 分支上的旧文件 ───────────────────────────────
       - name: Clear old files on release branch
+        if: steps.compare.outputs.should_run == 'true'
         run: |
-          git rm -rf . || true   # 删除所有被 git 跟踪的文件
-          # 清理未跟踪文件（保留 .git 目录）
+          git rm -rf . || true
           find . -not -path './.git/*' -not -name '.git' \
             -mindepth 1 -maxdepth 1 -exec rm -rf {} + || true
 
-      # ── 5. 复制新 js 文件到仓库根目录 ────────────────────────────────
+      # ── 7. 复制新 js 文件到仓库根目录 ────────────────────────────────
       - name: Copy JS files from 推荐 folder
+        if: steps.compare.outputs.should_run == 'true'
         run: |
           cp "$RECOMMEND_DIR"/*.js . 2>/dev/null || {
             echo "❌ 推荐文件夹内没有 .js 文件"
@@ -116,15 +159,15 @@ jobs:
           echo "Copied files:"
           ls -1 *.js
 
-      # ── 6. 生成 sources.json ──────────────────────────────────────────
+      # ── 8. 生成 sources.json ──────────────────────────────────────────
       - name: Generate sources.json
+        if: steps.compare.outputs.should_run == 'true'
         run: |
           TAG="${{ steps.release.outputs.tag }}"
           REPO_OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
           BASE_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@release"
 
-          # 收集所有 js 文件名，生成 sources 数组
           SOURCES_JSON=""
           for f in *.js; do
             ENCODED=$(python3 -c "
@@ -133,7 +176,6 @@ jobs:
           " "$f")
             SOURCES_JSON="${SOURCES_JSON}    { \"url\": \"${BASE_URL}/${ENCODED}\" },\n"
           done
-          # 去掉末尾多余的逗号
           SOURCES_JSON="${SOURCES_JSON%,\\n}"
 
           cat > sources.json <<EOF
@@ -148,15 +190,13 @@ jobs:
           echo "Generated sources.json:"
           cat sources.json
 
-      # ── 7. 提交并推送到 release 分支 ─────────────────────────────────
-      - name: Commit and push
+      # ── 9. 提交并推送到 release 分支 ─────────────────────────────────
+      - name: Commit and push to release branch
+        if: steps.compare.outputs.should_run == 'true'
         run: |
           git add -A
-          git status
-
           TAG="${{ steps.release.outputs.tag }}"
 
-          # 如果没有变化则跳过提交
           if git diff --cached --quiet; then
             echo "✅ 内容无变化，无需提交"
           else
@@ -164,3 +204,18 @@ jobs:
             git push origin release
             echo "✅ 已推送到 release 分支"
           fi
+
+      # ── 10. 回到默认分支，更新 .last_synced_tag ──────────────────────
+      - name: Update last synced tag on default branch
+        if: steps.compare.outputs.should_run == 'true'
+        run: |
+          TAG="${{ steps.release.outputs.tag }}"
+
+          # 切回默认分支
+          git checkout -
+
+          echo "$TAG" > .last_synced_tag
+          git add .last_synced_tag
+          git commit -m "chore: update last synced tag to ${TAG}"
+          git push origin HEAD
+          echo "✅ .last_synced_tag 已更新为 ${TAG}"
