@@ -181,7 +181,7 @@ jobs:
           cat > sources.json <<EOF
           {
             "version": "${TAG}",
-            "name": "聚合源合集",
+            "name": "优质聚合源",
             "sources": [
           $(echo -e "$SOURCES_JSON" | sed 's/^  //')
             ]
