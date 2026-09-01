@@ -3,7 +3,6 @@ import { useI18n } from '@/lang'
 import Menu, { type Menus, type MenuType, type Position } from '@/components/common/Menu'
 import { LIST_IDS } from '@/config/constant'
 import musicSdk from '@/utils/musicSdk'
-import { hasMvMissing } from '@/core/listMvRefresh'
 import { scaleSizeW } from '@/utils/pixelRatio'
 import listState from '@/store/list/state'
 
@@ -75,8 +74,7 @@ export default forwardRef<ListMenuType, ListMenuProps>(({
     let rename = false
     let sync = false
     let remove = false
-    // 仅当列表内存在缺失 mv 信息的网易/酷狗歌曲时，才启用“重新导入”
-    let refresh = hasMvMissing(listInfo.id)
+    // “重新导入”始终可点：若无需要补全的网易/酷狗歌曲，点击后会有 toast 提示
     let local_file = !listState.fetchingListStatus[listInfo.id]
     let userList: LX.List.UserListInfo
     switch (listInfo.id) {
@@ -96,7 +94,7 @@ export default forwardRef<ListMenuType, ListMenuProps>(({
       { action: 'rename', disabled: !rename, label: t('list_rename') },
       { action: 'sort', label: t('list_sort') },
       { action: 'duplicateMusic', label: t('lists__duplicate') },
-      { action: 'refresh', disabled: !refresh, label: t('list_reimport') },
+      { action: 'refresh', label: t('list_reimport') },
       { action: 'local_file', disabled: !local_file, label: t('list_select_local_file') },
       { action: 'sync', disabled: !sync || !local_file, label: t('list_sync') },
       { action: 'import', label: t('list_import') },
