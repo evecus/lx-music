@@ -1,6 +1,6 @@
 import { getMusicInfo as getKgMusicInfo } from '@/utils/musicSdk/kg/musicInfo'
 import getWyMusicInfo from '@/utils/musicSdk/wy/musicInfo'
-import listState from '@/store/list/state'
+import { getListMusicSync, getListMusics } from '@/utils/listManage'
 import { updateListMusics } from './list'
 import { toast } from '@/utils/tools'
 
@@ -8,9 +8,8 @@ const REFRESH_DELAY = 300
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-const getListMusics = (listId: string): LX.Music.MusicInfo[] => {
-  return listState.allMusicList.get(listId) ?? []
-}
+// 注意：歌单歌曲数据实际存储在 listManage 模块内的 allMusicList（store/list/state 里的
+// allMusicList 只是初始空 Map，从未被写入），必须从 listManage 读取
 
 // 只有网易(wy)/酷狗(kg)源的歌曲支持播放MV/下载MV，其他源重新拉取没有意义；
 // 仅挑选 meta.mv 缺失的歌曲进行补全。
@@ -22,7 +21,7 @@ const isMvMissing = (musicInfo: LX.Music.MusicInfo) => {
   return mv == null || mv === '' || mv === 0
 }
 
-export const hasMvMissing = (listId: string) => getListMusics(listId).some(isMvMissing)
+export const hasMvMissing = (listId: string) => getListMusicSync(listId).some(isMvMissing)
 
 /**
  * “重新导入”：逐首从歌曲对应平台（仅网易/酷狗）拉取最新歌曲信息，
@@ -30,7 +29,7 @@ export const hasMvMissing = (listId: string) => getListMusics(listId).some(isMvM
  * 拉取成功但源本身没有 MV 的歌曲不会写入（保持无 MV 状态）。
  */
 export const refreshListMvInfo = async (listId: string) => {
-  const targets = getListMusics(listId).filter(isMvMissing)
+  const targets = (await getListMusics(listId)).filter(isMvMissing)
   if (!targets.length) {
     toast('列表内没有需要重新导入的网易/酷狗歌曲', 'long')
     return
