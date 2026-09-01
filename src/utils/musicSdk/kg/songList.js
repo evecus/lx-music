@@ -3,6 +3,12 @@ import { decodeName, formatPlayTime, sizeFormate, dateFormat, formatPlayCount } 
 import infSign from './vendors/infSign.min'
 import { signatureParams } from './util'
 
+// 歌单接口加固：主用 https（加密防运营商劫持），重试时交替回退 http；
+// 重试间隔 1 秒给网络抖动留出恢复时间，超时放宽到 30 秒
+const RETRY_DELAY = 1000
+const REQUEST_TIMEOUT = 30000
+const retryDelay = () => new Promise(resolve => setTimeout(resolve, RETRY_DELAY))
+
 const handleSignature = (id, page, limit) => new Promise((resolve, reject) => {
   infSign({ appid: 1058, type: 0, module: 'playlist', page, pagesize: limit, specialid: id }, null, {
     useH5: !0,
@@ -114,10 +120,19 @@ export default {
   async getListDetailBySpecialId(id, page, tryNum = 0) {
     if (tryNum > 2) throw new Error('try max num')
 
-    const { body } = await httpFetch(this.getSongListDetailUrl(id)).promise
+    let body
+    try {
+      ;({ body } = await httpFetch(this.getSongListDetailUrl(id, tryNum % 2 === 1), { timeout: REQUEST_TIMEOUT }).promise)
+    } catch (err) {
+      await retryDelay()
+      return this.getListDetailBySpecialId(id, page, ++tryNum)
+    }
     let listData = body.match(this.regExps.listData)
     let listInfo = body.match(this.regExps.listInfo)
-    if (!listData) return this.getListDetailBySpecialId(id, page, ++tryNum)
+    if (!listData) {
+      await retryDelay()
+      return this.getListDetailBySpecialId(id, page, ++tryNum)
+    }
     let list = await this.getMusicInfos(JSON.parse(listData[1]))
     // listData = this.filterData(JSON.parse(listData[1]))
     let name
@@ -164,17 +179,20 @@ export default {
     //   },
     // }
   },
-  getInfoUrl(tagId) {
+  getInfoUrl(tagId, useHttp = false) {
+    const protocol = useHttp ? 'http' : 'https'
     return tagId
-      ? `http://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_smarty=1&cdn=cdn&t=5&c=${tagId}`
-      : 'http://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_smarty=1&'
+      ? `${protocol}://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_smarty=1&cdn=cdn&t=5&c=${tagId}`
+      : `${protocol}://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_smarty=1&`
   },
-  getSongListUrl(sortId, tagId, page) {
+  getSongListUrl(sortId, tagId, page, useHttp = false) {
     if (tagId == null) tagId = ''
-    return `http://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_ajax=1&cdn=cdn&t=${sortId}&c=${tagId}&p=${page}`
+    const protocol = useHttp ? 'http' : 'https'
+    return `${protocol}://www2.kugou.kugou.com/yueku/v9/special/getSpecial?is_ajax=1&cdn=cdn&t=${sortId}&c=${tagId}&p=${page}`
   },
-  getSongListDetailUrl(id) {
-    return `http://www2.kugou.kugou.com/yueku/v9/special/single/${id}-5-9999.html`
+  getSongListDetailUrl(id, useHttp = false) {
+    const protocol = useHttp ? 'http' : 'https'
+    return `${protocol}://www2.kugou.kugou.com/yueku/v9/special/single/${id}-5-9999.html`
   },
 
   filterInfoHotTag(rawData) {
@@ -210,12 +228,19 @@ export default {
   getSongList(sortId, tagId, page, tryNum = 0) {
     if (this._requestObj_list) this._requestObj_list.cancelHttp()
     if (tryNum > 2) return Promise.reject(new Error('try max num'))
+    // 主用 https，奇数次重试回退 http（个别网络环境下两者通断情况不同）
+    const useHttp = tryNum % 2 === 1
     this._requestObj_list = httpFetch(
-      this.getSongListUrl(sortId, tagId, page),
+      this.getSongListUrl(sortId, tagId, page, useHttp),
+      { timeout: REQUEST_TIMEOUT },
     )
     return this._requestObj_list.promise.then(({ body }) => {
-      if (!body || body.status !== 1) return this.getSongList(sortId, tagId, page, ++tryNum)
+      if (!body || body.status !== 1) return retryDelay().then(() => this.getSongList(sortId, tagId, page, ++tryNum))
       return this.filterList(body.special_db)
+    }).catch(err => {
+      // 网络层失败（超时/DNS/断网）也纳入重试
+      if (tryNum >= 2) throw err
+      return retryDelay().then(() => this.getSongList(sortId, tagId, page, ++tryNum))
     })
   },
   getSongListRecommend(tryNum = 0) {
@@ -323,12 +348,14 @@ export default {
   },
   async getMusicInfos(list) {
     // 注意：gateway(v2/album_audio/audio) 的 audio_info 模块不返回 mvhash，
-    // 而歌单各详情接口（song_v2 等）的原始数据里通常直接带 mvhash 字段，
+    // 而歌单各详情接口的原始数据里直接带 MV hash 字段，但字段名不统一：
+    // - song_v2/v5 接口（分享/合集页）：顶层 mvhash
+    // - v9 网页版歌单详情页（global.data）：顶层 mv_hash（下划线）、high_mv_hash
     // 若不提前缓存，filterData2 里 audio_info.mvhash 永远是 undefined，
     // 导致歌单里的歌曲丢失 MV 标识（搜索、排行榜接口直接返回 mvhash 所以不受影响）
     const mvHashes = new Map()
     list.forEach(item => {
-      const mv = item?.mvhash || item?.audio_info?.mvhash || item?.base?.mvhash
+      const mv = item?.mvhash || item?.mv_hash || item?.audio_info?.mvhash || item?.base?.mvhash || item?.high_mv_hash
       if (item?.hash && mv) mvHashes.set(item.hash, mv)
     })
     const infos = this.filterData2(
@@ -908,15 +935,19 @@ typeUrl: {},
   getListInfo(tagId, tryNum = 0) {
     if (this._requestObj_listInfo) this._requestObj_listInfo.cancelHttp()
     if (tryNum > 2) return Promise.reject(new Error('try max num'))
-    this._requestObj_listInfo = httpFetch(this.getInfoUrl(tagId))
+    const useHttp = tryNum % 2 === 1
+    this._requestObj_listInfo = httpFetch(this.getInfoUrl(tagId, useHttp), { timeout: REQUEST_TIMEOUT })
     return this._requestObj_listInfo.promise.then(({ body }) => {
-      if (body.status !== 1) return this.getListInfo(tagId, ++tryNum)
+      if (body.status !== 1) return retryDelay().then(() => this.getListInfo(tagId, ++tryNum))
       return {
         limit: body.data.params.pagesize,
         page: body.data.params.p,
         total: body.data.params.total,
         source: 'kg',
       }
+    }).catch(err => {
+      if (tryNum >= 2) throw err
+      return retryDelay().then(() => this.getListInfo(tagId, ++tryNum))
     })
   },
 
@@ -946,14 +977,18 @@ typeUrl: {},
   getTags(tryNum = 0) {
     if (this._requestObj_tags) this._requestObj_tags.cancelHttp()
     if (tryNum > 2) return Promise.reject(new Error('try max num'))
-    this._requestObj_tags = httpFetch(this.getInfoUrl())
+    const useHttp = tryNum % 2 === 1
+    this._requestObj_tags = httpFetch(this.getInfoUrl(undefined, useHttp), { timeout: REQUEST_TIMEOUT })
     return this._requestObj_tags.promise.then(({ body }) => {
-      if (body.status !== 1) return this.getTags(++tryNum)
+      if (body.status !== 1) return retryDelay().then(() => this.getTags(++tryNum))
       return {
         hotTag: this.filterInfoHotTag(body.data.hotTag),
         tags: this.filterTagInfo(body.data.tagids),
         source: 'kg',
       }
+    }).catch(err => {
+      if (tryNum >= 2) throw err
+      return retryDelay().then(() => this.getTags(++tryNum))
     })
   },
 

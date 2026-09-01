@@ -7,8 +7,6 @@ import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 
-import androidx.core.content.ContextCompat;
-
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -70,8 +68,7 @@ public class Lyric extends LyricPlayer {
       }
     };
 
-    // Android 14（targetSdk 34）起注册接收器必须指定 EXPORTED 标记
-    ContextCompat.registerReceiver(reactAppContext, screenOnOffReceiver, theFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+    reactAppContext.registerReceiver(screenOnOffReceiver, theFilter);
   }
 
   // private void checkA2DPConnection(Context context) {
