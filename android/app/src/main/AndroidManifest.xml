@@ -109,5 +109,12 @@
           android:name="android.support.FILE_PROVIDER_PATHS"
           android:resource="@xml/file_paths" />
       </provider>
+
+      <!-- 播放服务：Android 14（targetSdk 34）起前台服务必须声明类型，
+           track-player 库内置声明未带类型，这里覆盖为 mediaPlayback -->
+      <service
+        android:name="com.guichaguri.trackplayer.service.MusicService"
+        android:foregroundServiceType="mediaPlayback"
+        tools:replace="android:foregroundServiceType" />
     </application>
 </manifest>

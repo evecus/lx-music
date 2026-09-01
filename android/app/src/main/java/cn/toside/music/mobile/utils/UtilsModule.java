@@ -16,6 +16,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 import androidx.core.app.LocaleManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.core.os.LocaleListCompat;
 
@@ -95,8 +96,9 @@ public class UtilsModule extends ReactContextBaseJavaModule {
       }
     };
 
-    reactContext.registerReceiver(screenOnOffReceiver, theFilter);
-  }
+// Android 14（targetSdk 34）起注册接收器必须指定 EXPORTED 标记
+ContextCompat.registerReceiver(reactContext, screenOnOffReceiver, theFilter, ContextCompat.RECEIVER_NOT_EXPORTED);
+}
 
   @ReactMethod
   public void exitApp() {

@@ -13,10 +13,13 @@ const getListMusics = (listId: string): LX.Music.MusicInfo[] => {
 }
 
 // 只有网易(wy)/酷狗(kg)源的歌曲支持播放MV/下载MV，其他源重新拉取没有意义；
-// 仅挑选 meta.mv 缺失的歌曲进行补全
+// 仅挑选 meta.mv 缺失的歌曲进行补全。
+// 注意：酷狗无 MV 时存的是空字符串、网易是无 MV 时存的是 0，
+// 这些值与 null/undefined 一样都视为“缺失”
 const isMvMissing = (musicInfo: LX.Music.MusicInfo) => {
   if (musicInfo.source !== 'wy' && musicInfo.source !== 'kg') return false
-  return (musicInfo.meta as LX.Music.MusicInfoMeta_online).mv == null
+  const mv = (musicInfo.meta as LX.Music.MusicInfoMeta_online).mv
+  return mv == null || mv === '' || mv === 0
 }
 
 export const hasMvMissing = (listId: string) => getListMusics(listId).some(isMvMissing)
