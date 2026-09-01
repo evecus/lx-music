@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-native-track-player/android/src/main/java/com/guichaguri/trackplayer/service/metadata/MetadataManager.java b/node_modules/react-native-track-player/android/src/main/java/com/guichaguri/trackplayer/service/metadata/MetadataManager.java
+index 0000000..1111111 100644
+--- a/node_modules/react-native-track-player/android/src/main/java/com/guichaguri/trackplayer/service/metadata/MetadataManager.java
++++ b/node_modules/react-native-track-player/android/src/main/java/com/guichaguri/trackplayer/service/metadata/MetadataManager.java
+@@ -113,7 +113,7 @@ public class MetadataManager {
+         openApp.setAction(Intent.ACTION_VIEW);
+         openApp.setData(Uri.parse("trackplayer://notification.click"));
+ 
+-        builder.setContentIntent(PendingIntent.getActivity(context, 0, openApp, PendingIntent.FLAG_CANCEL_CURRENT));
++        builder.setContentIntent(PendingIntent.getActivity(context, 0, openApp, PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+ 
+         builder.setSmallIcon(R.drawable.play);
+         builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT);
