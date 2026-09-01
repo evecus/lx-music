@@ -346,33 +346,40 @@ export default {
       },
     }).then(data => data.map(s => s[0])))
   },
-  async getMusicInfos(list) {
-    // 注意：gateway(v2/album_audio/audio) 的 audio_info 模块不返回 mvhash，
-    // 而歌单各详情接口的原始数据里直接带 MV hash 字段，但字段名不统一：
-    // - song_v2/v5 接口（分享/合集页）：顶层 mvhash
-    // - v9 网页版歌单详情页（global.data）：顶层 mv_hash（下划线）、high_mv_hash
-    // 若不提前缓存，filterData2 里 audio_info.mvhash 永远是 undefined，
-    // 导致歌单里的歌曲丢失 MV 标识（搜索、排行榜接口直接返回 mvhash 所以不受影响）
-    const mvHashes = new Map()
-    list.forEach(item => {
-      const mv = item?.mvhash || item?.mv_hash || item?.audio_info?.mvhash || item?.base?.mvhash || item?.high_mv_hash
-      if (item?.hash && mv) mvHashes.set(item.hash, mv)
-    })
-    const infos = this.filterData2(
-      await Promise.all(
-        this.createTask(
-          this.deDuplication(list)
-            .map(item => ({ hash: item.hash })),
-        ))
-        .then(([...datas]) => datas.flat()))
-    // 回填 MV 标识
-    if (mvHashes.size) {
-      infos.forEach(info => {
-        info.mv = mvHashes.get(info.hash) || info.mv || null
-      })
-    }
-    return infos
-  },
+async getMusicInfos(list) {
+// 注意：gateway(v3/album_audio/audio) 的 audio_info 模块不返回 mvhash，
+// 且聚合接口返回的 hash 与歌单原始数据的 hash 体系不一致（同一首歌两边 hash 不同，无法按 hash 对齐），
+// 因此：song_v2/v5 接口（分享/合集页）按 hash 命中；v9 网页版数据按「歌名+歌手」匹配，
+// MV 属于歌曲而非某个音频版本，歌名+歌手一致即认为匹配
+// 命中后把 mvhash 写进聚合返回的 audio_info.mvhash，由 filterData2 读取
+const mvHashes = new Map()
+const mvNameMap = new Map()
+// 歌手名归一化：去掉分隔符与空白，避免 v9 的 “A、B” 与聚合的 “A/B” 对不上
+const normSinger = s => decodeName(s || '').replace(/[\/、，,|&\s]+/g, '')
+const normName = s => decodeName(s || '').replace(/\s*[-_—–]\s*[^-_—–]*$/, '').trim()
+list.forEach(item => {
+const mv = item?.mvhash || item?.mv_hash || item?.audio_info?.mvhash || item?.base?.mvhash || item?.high_mv_hash
+if (!mv) return
+if (item.hash) mvHashes.set(item.hash, mv)
+if (item.songname != null) {
+const key = `${normName(item.songname)}|${normSinger(item.singername || item.author_name)}`
+if (key !== '|') mvNameMap.set(key, mv)
+}
+})
+const datas = await Promise.all(
+this.createTask(
+this.deDuplication(list)
+.map(item => ({ hash: item.hash })),
+))
+.then(([...datas]) => datas.flat())
+datas.forEach(item => {
+if (!item?.audio_info) return
+const mv = mvHashes.get(item.audio_info.hash) ??
+mvNameMap.get(`${normName(item.songname)}|${normSinger(item.author_name)}`)
+if (mv) item.audio_info.mvhash = mv
+})
+return this.filterData2(datas)
+},
 
   async getUserListDetailByCode(id) {
     const songInfo = await this.createHttp('http://t.kugou.com/command/', {

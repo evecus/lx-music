@@ -1,7 +1,7 @@
-import { getMusicInfo as getKgMusicInfo } from '@/utils/musicSdk/kg/musicInfo'
 import getWyMusicInfo from '@/utils/musicSdk/wy/musicInfo'
 import { getListMusicSync, getListMusics } from '@/utils/listManage'
 import { updateListMusics } from './list'
+import { httpFetch } from '@/utils/request'
 import { toast } from '@/utils/tools'
 
 const REFRESH_DELAY = 300
@@ -53,10 +53,14 @@ export const refreshListMvInfo = async (listId: string) => {
       } else {
         const hash = (musicInfo.meta as LX.Music.MusicInfo_kg['meta']).hash
         if (!hash) throw new Error('缺少hash')
-        const info = await getKgMusicInfo(hash)
+        // 聚合接口（v2/album_audio/audio）不返回 mvhash，改用 v3/song/info 直接查（已实测返回 data.mvhash）
+        const { body } = await (httpFetch(`http://mobilecdnbj.kugou.com/api/v3/song/info?hash=${hash}&version=9108&plat=0&area_code=1`) as {
+          promise: Promise<{ body: { status: number, data?: { mvhash?: string } } }>
+        }).promise
+        const mv = body?.data?.mvhash
         // 酷狗的 mv 为 mvhash 字符串，空表示没有 MV
-        if (info?.mv) {
-          updated.push({ id: musicInfo.id, musicInfo: { ...musicInfo, meta: { ...musicInfo.meta, mv: info.mv } } })
+        if (mv) {
+          updated.push({ id: musicInfo.id, musicInfo: { ...musicInfo, meta: { ...musicInfo.meta, mv } } })
         }
       }
     } catch {
