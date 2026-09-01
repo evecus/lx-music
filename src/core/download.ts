@@ -90,8 +90,12 @@ const processQueue = async () => {
   try {
     await startDownload(task);
   } catch (error: any) {
-    downloadActions.updateTask(task.id, { status: 'error', errorMsg: error.message });
-    toast(`${task.fileName} 下载失败：${error.message}`, 'long');
+    // 用户主动暂停导致的取消（stopDownload 会让 promise reject），不标记为失败
+    const current = downloadState.tasks.find(t => t.id === task.id);
+    if (current?.status !== 'paused') {
+      downloadActions.updateTask(task.id, { status: 'error', errorMsg: error.message });
+      toast(`${task.fileName} 下载失败：${error.message}`, 'long');
+    }
   } finally {
     isProcessing = false;
     processQueue();
@@ -394,6 +398,26 @@ export const addTask = (
   taskQueue.push(task);
   processQueue();
   if (!silent) toast(`已加入下载队列：${fileName}`, 'short');
+};
+
+/**
+ * 暂停正在下载的任务：取消 RNFS 下载并标记为 paused。
+ * 恢复时（resumeTask）会删除未完成的文件并重新下载。
+ */
+export const pauseTask = (taskId: string) => {
+  const task = downloadState.tasks.find(t => t.id === taskId);
+  if (!task || task.status !== 'downloading') return;
+  // 先更新状态再取消任务，processQueue 的失败分支会根据 paused 状态忽略本次取消
+  downloadActions.updateTask(taskId, { status: 'paused' });
+  const jobId = activeJobs.get(taskId);
+  if (jobId != null) {
+    RNFS.stopDownload(jobId);
+    activeJobs.delete(taskId);
+  }
+  const taskIndex = taskQueue.findIndex(t => t.id === taskId);
+  if (taskIndex > -1) taskQueue.splice(taskIndex, 1);
+  void unlink(task.filePath).catch(() => {});
+  toast(`${task.fileName} 已暂停`, 'short');
 };
 
 export const removeTask = (id: string) => {

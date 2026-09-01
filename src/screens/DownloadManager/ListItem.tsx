@@ -1,12 +1,13 @@
-import { memo, useMemo, useCallback, useState, useEffect } from 'react';
+import { memo, useMemo, useCallback, useState, useEffect, useRef } from 'react';
 import { View, TouchableOpacity } from 'react-native';
 import Text from '@/components/common/Text';
 import Image from '@/components/common/Image';
 import { Icon } from '@/components/common/Icon';
+import Menu, { type MenuType } from '@/components/common/Menu';
 import { useTheme } from '@/store/theme/hook';
 import { createStyle } from '@/utils/tools';
 import { dateFormat, sizeFormate } from '@/utils/common';
-import { resumeTask, retryTask } from '@/core/download';
+import { pauseTask, resumeTask, retryTask, removeTask } from '@/core/download';
 
 const ProgressBar = ({ progress, theme }: { progress: number, theme: ReturnType<typeof useTheme> }) => (
   <View style={styles.progressTrack}>
@@ -14,10 +15,15 @@ const ProgressBar = ({ progress, theme }: { progress: number, theme: ReturnType<
   </View>
 )
 
-export default memo(({ task: initialTask, onRemove }: { task: LX.Download.DownloadTask, onRemove: (id: string) => void }) => {
+export default memo(({ task: initialTask }: { task: LX.Download.DownloadTask }) => {
   const theme = useTheme();
   const [task, setTask] = useState(initialTask);
   const errorColor = theme['c-600'];
+
+  const [menus, setMenus] = useState<{ action: string, label: string, disabled?: boolean }[]>([]);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const menuRef = useRef<MenuType>(null);
+  const moreButtonRef = useRef<TouchableOpacity>(null);
 
   useEffect(() => {
     const handleProgressUpdate = ({ id, progress }: { id: string, progress: LX.Download.DownloadTask['progress'] }) => {
@@ -53,13 +59,53 @@ export default memo(({ task: initialTask, onRemove }: { task: LX.Download.Downlo
 
   const hasMetaError = useMemo(() => Object.values(task.metadataStatus).includes('fail'), [task.metadataStatus]);
 
-  const handleRetry = useCallback(() => {
-    retryTask(task.id);
+  const handleMenuPress = useCallback(({ action }: { action: string }) => {
+    switch (action) {
+      case 'pause':
+        pauseTask(task.id);
+        break;
+      case 'resume':
+        void resumeTask(task.id);
+        break;
+      case 'retry':
+        retryTask(task.id);
+        break;
+      case 'remove':
+        removeTask(task.id);
+        break;
+      default:
+        break;
+    }
   }, [task.id]);
 
-  const handleResume = useCallback(() => {
-    void resumeTask(task.id);
-  }, [task.id]);
+  const handleShowMenu = useCallback(() => {
+    const buildMenus = () => {
+      // 与歌曲菜单样式一致的三点菜单，按任务状态显示不同操作
+      const list: { action: string, label: string, disabled?: boolean }[] = [];
+      if (task.status === 'downloading') list.push({ action: 'pause', label: '暂停' });
+      if (task.status === 'paused') list.push({ action: 'resume', label: '开始' });
+      if (task.status === 'error' || (task.status === 'completed' && Object.values(task.metadataStatus).includes('fail'))) {
+        list.push({ action: 'retry', label: '重试' });
+      }
+      list.push({ action: 'remove', label: '删除' });
+      return list;
+    };
+
+    setMenus(buildMenus());
+
+    if (moreButtonRef.current?.measure) {
+      moreButtonRef.current.measure((fx, fy, width, height, px, py) => {
+        const position = { x: Math.ceil(px), y: Math.ceil(py), w: Math.ceil(width), h: Math.ceil(height) };
+        if (menuVisible) menuRef.current?.show(position);
+        else {
+          setMenuVisible(true);
+          requestAnimationFrame(() => {
+            menuRef.current?.show(position);
+          });
+        }
+      });
+    }
+  }, [task.status, task.metadataStatus, menuVisible]);
 
   const renderStatus = () => {
     switch (task.status) {
@@ -86,7 +132,7 @@ export default memo(({ task: initialTask, onRemove }: { task: LX.Download.Downlo
       case 'error':
         return <Text size={12} color={errorColor} numberOfLines={1}>{task.errorMsg || '下载失败'}</Text>;
       case 'paused':
-        return <Text size={12} color={theme['c-font-label']}>已中断，可继续下载</Text>;
+        return <Text size={12} color={theme['c-font-label']}>已暂停</Text>;
       case 'waiting':
         return <Text size={12} color={theme['c-font-label']}>等待中...</Text>;
       default:
@@ -108,11 +154,6 @@ export default memo(({ task: initialTask, onRemove }: { task: LX.Download.Downlo
         <Icon name={task.metadataStatus.lyric === 'success' ? 'checkbox-marked' : (task.metadataStatus.lyric === 'fail' ? 'close' : 'checkbox-blank-outline')} color={task.metadataStatus.lyric === 'success' ? theme['c-primary'] : (task.metadataStatus.lyric === 'fail' ? errorColor : theme['c-font-label'])} size={12} />
         <Text size={10} color={theme['c-font-label']}>歌词</Text>
       </View>
-      {hasMetaError && task.status === 'completed' && (
-        <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
-          <Icon name="available_updates" size={14} color={theme['c-primary-font-active']} />
-        </TouchableOpacity>
-      )}
     </View>
   );
 
@@ -134,21 +175,10 @@ export default memo(({ task: initialTask, onRemove }: { task: LX.Download.Downlo
         {renderStatus()}
         {task.status === 'completed' && renderMetadataStatus()}
       </View>
-      <View style={styles.actionsContainer}>
-        {task.status === 'paused' && (
-          <TouchableOpacity onPress={handleResume} style={styles.actionButton}>
-            <Icon name="play-outline" size={18} color={theme['c-primary']} />
-          </TouchableOpacity>
-        ) }
-        {(task.status === 'error' || (task.status === 'completed' && hasMetaError)) && (
-          <TouchableOpacity onPress={handleRetry} style={styles.actionButton}>
-            <Icon name="available_updates" size={18} color={theme['c-primary']} />
-          </TouchableOpacity>
-        ) }
-        <TouchableOpacity onPress={() => onRemove(task.id)} style={styles.actionButton}>
-          <Icon name="close" size={16} color={theme['c-font-label']} />
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity onPress={handleShowMenu} ref={moreButtonRef} style={styles.moreButton}>
+        <Icon name="dots-vertical" size={16} color={theme['c-350']} />
+      </TouchableOpacity>
+      {menuVisible && <Menu ref={menuRef} menus={menus} onPress={handleMenuPress} />}
     </View>
   );
 });
@@ -193,12 +223,8 @@ const styles = createStyle({
     marginTop: 4,
     marginBottom: 4,
   },
-  actionButton: {
+  moreButton: {
     padding: 10,
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   metadataContainer: {
     flexDirection: 'row',
@@ -211,8 +237,4 @@ const styles = createStyle({
     alignItems: 'center',
     gap: 2,
   },
-  retryButton: {
-    marginLeft: 'auto',
-    padding: 4,
-  }
 });

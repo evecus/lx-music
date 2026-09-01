@@ -9,8 +9,9 @@ import { getDislikeInfo, setDislikeInfo } from '@/core/dislikeList'
 import { unlink } from '@/utils/fs'
 import { TEMP_FILE_PATH } from '@/utils/tools'
 // import { play, playList } from '../player/player'
-import { getDownloadTasks } from '@/utils/data/download'
+import { getDownloadTasks, getMvDownloadTasks } from '@/utils/data/download'
 import downloadActions from '@/store/download/action'
+import mvDownloadActions from '@/store/mvDownload/action'
 
 // const initPrevPlayInfo = async(appSetting: LX.AppSetting) => {
 //   const info = await getPlayInfo()
@@ -38,6 +39,8 @@ export default async(appSetting: LX.AppSetting) => {
   bootLog('Download tasks init...')
   const savedTasks = await getDownloadTasks()
   downloadActions.setTasks(savedTasks)
+  const savedMvTasks = await getMvDownloadTasks()
+  mvDownloadActions.setTasks(savedMvTasks)
   bootLog('Download tasks inited.')
 
   setNavActiveId((await getViewPrevState()).id)

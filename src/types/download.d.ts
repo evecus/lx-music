@@ -26,7 +26,7 @@ declare namespace LX {
     interface MvDownloadTask {
       id: string;
       musicInfo: LX.Music.MusicInfo;
-      status: 'waiting' | 'downloading' | 'completed' | 'error';
+      status: 'waiting' | 'downloading' | 'paused' | 'completed' | 'error';
       progress: {
         percent: number;
         speed: string;

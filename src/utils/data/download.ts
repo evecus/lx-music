@@ -19,3 +19,22 @@ export const getDownloadTasks = async (): Promise<LX.Download.DownloadTask[]> =>
 export const saveDownloadTasks = async (tasks: LX.Download.DownloadTask[]) => {
   await saveData(DOWNLOAD_TASKS_KEY, tasks);
 };
+
+const MV_DOWNLOAD_TASKS_KEY = storageDataPrefix.mvDownloadList;
+
+export const normalizeMvDownloadTasks = (tasks: LX.Download.MvDownloadTask[]): LX.Download.MvDownloadTask[] =>
+  tasks.map(task => {
+    if (task.status === 'downloading' || task.status === 'waiting') {
+      return { ...task, status: 'paused' };
+    }
+    return task;
+  });
+
+export const getMvDownloadTasks = async (): Promise<LX.Download.MvDownloadTask[]> => {
+  const tasks = await getData<LX.Download.MvDownloadTask[]>(MV_DOWNLOAD_TASKS_KEY);
+  return normalizeMvDownloadTasks(tasks || []);
+};
+
+export const saveMvDownloadTasks = async (tasks: LX.Download.MvDownloadTask[]) => {
+  await saveData(MV_DOWNLOAD_TASKS_KEY, tasks);
+};

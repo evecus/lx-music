@@ -81,6 +81,7 @@ export const storageDataPrefix = {
   userApi: '@user_api__',
 userApiGroup: '@user_api_group__',
 downloadList: '@download_list',
+mvDownloadList: '@mv_download_list',
 lastSelectQuality: '@last_select_quality',
 } as const
 
@@ -107,7 +108,7 @@ export const NAV_MENUS = [
   { id: 'nav_songlist', icon: 'album' },
   { id: 'nav_top', icon: 'leaderboard' },
   { id: 'nav_love', icon: 'love' },
-  // { id: 'download', icon: 'download-2' },
+  { id: 'nav_download_manager', icon: 'download-2' },
   { id: 'nav_setting', icon: 'setting' },
 ] as const
 

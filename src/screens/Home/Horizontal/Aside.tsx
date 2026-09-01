@@ -6,6 +6,8 @@ import { Icon } from '@/components/common/Icon'
 import { confirmDialog, createStyle, exitApp as backHome } from '@/utils/tools'
 import { NAV_MENUS } from '@/config/constant'
 import type { InitState } from '@/store/common/state'
+import commonState from '@/store/common/state'
+import { navigations } from '@/navigation'
 // import commonState from '@/store/common/state'
 import { exitApp, setNavActiveId } from '@/core/common'
 import { BorderWidths } from '@/theme'
@@ -118,6 +120,10 @@ export default memo(() => {
           if (!isExit) return
           exitApp('Exit Btn')
         })
+        return
+      case 'nav_download_manager':
+        // 下载管理是独立推入的页面，不参与主视图切换
+        navigations.pushDownloadManagerScreen(commonState.componentIds.home!)
         return
       case 'back_home':
         backHome()

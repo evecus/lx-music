@@ -322,13 +322,29 @@ export default {
     }).then(data => data.map(s => s[0])))
   },
   async getMusicInfos(list) {
-    return this.filterData2(
+    // 注意：gateway(v2/album_audio/audio) 的 audio_info 模块不返回 mvhash，
+    // 而歌单各详情接口（song_v2 等）的原始数据里通常直接带 mvhash 字段，
+    // 若不提前缓存，filterData2 里 audio_info.mvhash 永远是 undefined，
+    // 导致歌单里的歌曲丢失 MV 标识（搜索、排行榜接口直接返回 mvhash 所以不受影响）
+    const mvHashes = new Map()
+    list.forEach(item => {
+      const mv = item?.mvhash || item?.audio_info?.mvhash || item?.base?.mvhash
+      if (item?.hash && mv) mvHashes.set(item.hash, mv)
+    })
+    const infos = this.filterData2(
       await Promise.all(
         this.createTask(
           this.deDuplication(list)
             .map(item => ({ hash: item.hash })),
         ))
         .then(([...datas]) => datas.flat()))
+    // 回填 MV 标识
+    if (mvHashes.size) {
+      infos.forEach(info => {
+        info.mv = mvHashes.get(info.hash) || info.mv || null
+      })
+    }
+    return infos
   },
 
   async getUserListDetailByCode(id) {
@@ -652,7 +668,7 @@ export default {
       // console.log(location)
       if (location.includes('global_collection_id')) return this.getUserListDetail2(location.replace(/^.*?global_collection_id=(\w+)(?:&.*$|#.*$|$)/, '$1'))
       if (location.includes('gcid_')) {
-        let gcid = link.match(/gcid_\w+/)?.[0]
+        let gcid = location.match(/gcid_\w+/)?.[0]
         if (gcid) {
           const global_collection_id = await this.decodeGcid(gcid)
           if (global_collection_id) return this.getUserListDetail2(global_collection_id)
@@ -671,9 +687,21 @@ export default {
         } else return this.getUserListDetail3(location.replace(/.+\/(\w+).html(?:\?.*|&.*$|#.*$|$)/, '$1'), page)
       }
       // console.log('location', location)
-      // return this.getUserListDetail(link, page, ++retryNum)
+      // 最终地址与原地址不同但未命中以上任何类型，按新地址重新走一遍完整流程
+      return this.getUserListDetail(location, page, ++retryNum)
     }
-    if (typeof body == 'string') return this.getUserListDetail2(body.replace(/^[\s\S]+?"global_collection_id":"(\w+)"[\s\S]+?$/, '$1'))
+    if (typeof body == 'string') {
+      // 对齐桌面端：从分享页 HTML 中提取歌单 id，gcid 形式需先解码；
+      // 提取不到时直接报错，避免把整段 HTML 当作 id 传给后续接口
+      let global_collection_id = body.match(/"global_collection_id":"(\w+)"/)?.[1]
+      if (!global_collection_id) {
+        let gcid = body.match(/"encode_gic":"(\w+)"/)?.[1]
+        if (!gcid) gcid = body.match(/"encode_src_gid":"(\w+)"/)?.[1]
+        if (gcid) global_collection_id = await this.decodeGcid(gcid)
+      }
+      if (!global_collection_id) throw new Error('get list error')
+      return this.getUserListDetail2(global_collection_id)
+    }
     if (body.errcode !== 0) return this.getUserListDetail(link, page, ++retryNum)
     return this.getUserListDetailByLink(body, link)
   },

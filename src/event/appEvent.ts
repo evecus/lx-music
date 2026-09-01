@@ -223,6 +223,23 @@ export class AppEvent extends Event {
     this.emit('download_metadata_update', payload)
   }
 
+  // MV 下载列表改变事件
+  mv_download_list_changed() {
+    this.emit('mv_download_list_changed')
+  }
+
+  mv_download_task_add(task: LX.Download.MvDownloadTask) {
+    this.emit('mv_download_task_add', task)
+  }
+
+  mv_download_progress_update(payload: { id: string, progress: LX.Download.MvDownloadTask['progress'] }) {
+    this.emit('mv_download_progress_update', payload)
+  }
+
+  mv_download_status_update(payload: { id: string, status: LX.Download.MvDownloadTask['status'], errorMsg?: string }) {
+    this.emit('mv_download_status_update', payload)
+  }
+
   // 显示 MV 视频播放弹窗
   showVideoPlayer(url: string) {
     this.emit('showVideoPlayer', url)
