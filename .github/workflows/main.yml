@@ -84,17 +84,17 @@ jobs:
           echo "✅ 上游 tag 未更新（${{ steps.release.outputs.tag }}），无需同步，退出。"
           exit 0
 
-      # ── 4. 切换到 release 分支（不存在则创建）───────────────────────
-      - name: Checkout or create release branch
+      # ── 4. 切换到 sources 分支（不存在则创建）───────────────────────
+      - name: Checkout or create sources branch
         if: steps.compare.outputs.should_run == 'true'
         run: |
-          if git ls-remote --exit-code --heads origin release; then
-            git checkout release
+          if git ls-remote --exit-code --heads origin sources; then
+            git checkout sources
           else
-            git checkout --orphan release
+            git checkout --orphan sources
             git rm -rf . || true
-            git commit --allow-empty -m "init release branch"
-            git push origin release
+            git commit --allow-empty -m "init sources branch"
+            git push origin sources
           fi
 
       # ── 5. 下载并解压上游 zip ─────────────────────────────────────────
@@ -140,8 +140,8 @@ jobs:
           echo "Found 推荐 dir: $RECOMMEND_DIR"
           echo "RECOMMEND_DIR=$RECOMMEND_DIR" >> "$GITHUB_ENV"
 
-      # ── 6. 清空 release 分支上的旧文件 ───────────────────────────────
-      - name: Clear old files on release branch
+      # ── 6. 清空 sources 分支上的旧文件 ───────────────────────────────
+      - name: Clear old files on sources branch
         if: steps.compare.outputs.should_run == 'true'
         run: |
           git rm -rf . || true
@@ -166,7 +166,7 @@ jobs:
           TAG="${{ steps.release.outputs.tag }}"
           REPO_OWNER="${{ github.repository_owner }}"
           REPO_NAME="${{ github.event.repository.name }}"
-          BASE_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@release"
+          BASE_URL="https://cdn.jsdelivr.net/gh/${REPO_OWNER}/${REPO_NAME}@sources"
 
           SOURCES_JSON=""
           for f in *.js; do
@@ -191,8 +191,8 @@ jobs:
           echo "Generated sources.json:"
           cat sources.json
 
-      # ── 9. 提交并推送到 release 分支 ─────────────────────────────────
-      - name: Commit and push to release branch
+      # ── 9. 提交并推送到 sources 分支 ─────────────────────────────────
+      - name: Commit and push to sources branch
         if: steps.compare.outputs.should_run == 'true'
         run: |
           git add -A
@@ -202,8 +202,8 @@ jobs:
             echo "✅ 内容无变化，无需提交"
           else
             git commit -m "chore: sync lxmusic sources ${TAG}"
-            git push origin release
-            echo "✅ 已推送到 release 分支"
+            git push origin sources
+            echo "✅ 已推送到 sources 分支"
           fi
 
       # ── 10. 回到默认分支，更新 .last_synced_tag ──────────────────────
