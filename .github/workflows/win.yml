@@ -14,8 +14,10 @@ jobs:
     name: Windows
     runs-on: windows-latest
     steps:
-      - name: Check out git repository
-        uses: actions/checkout@v6
+      - uses: actions/checkout@v4
+        with:
+          ref: desktop
+          fetch-depth: 0
 
       - name: Get version from package.json
         id: get_version
