@@ -11,52 +11,32 @@ import { useI18n } from '@/lang'
 import Text from '@/components/common/Text'
 import { showPactModal } from '@/core/common'
 
-// const qqGroupUrl = 'mqqopensdkapi://bizAgent/qm/qr?url=http%3A%2F%2Fqm.qq.com%2Fcgi-bin%2Fqm%2Fqr%3Ffrom%3Dapp%26p%3Dandroid%26jump_from%3Dwebapi%26k%3Du1zyxek8roQAwic44nOkBXtG9CfbAxFw'
-// const qqGroupUrl2 = 'mqqopensdkapi://bizAgent/qm/qr?url=http%3A%2F%2Fqm.qq.com%2Fcgi-bin%2Fqm%2Fqr%3Ffrom%3Dapp%26p%3Dandroid%26jump_from%3Dwebapi%26k%3D-l4kNZ2bPQAuvfCQFFhl1UoibvF5wcrQ'
-// const qqGroupWebUrl = 'https://qm.qq.com/cgi-bin/qm/qr?k=jRZkyFSZ4FmUuTHA3P_RAXbbUO_Rrn5e&jump_from=webapi'
-// const qqGroupWebUrl2 = 'https://qm.qq.com/cgi-bin/qm/qr?k=HPNJEfrZpBZ9T8szYWbe2d5JrAAeOt_l&jump_from=webapi'
-
 export default memo(() => {
   const theme = useTheme()
   const t = useI18n()
   const openHomePage = () => {
-    void openUrl('https://github.com/lyswhut/lx-music-mobile#readme')
+    void openUrl('https://github.com/evecus/lx-music#readme')
   }
   const openIssuePage = () => {
-    void openUrl('https://github.com/lyswhut/lx-music-mobile/issues?q=is%3Aissue+')
+    void openUrl('https://github.com/evecus/lx-music/issues?q=is%3Aissue+')
   }
   const openGHReleasePage = () => {
-    void openUrl('https://github.com/lyswhut/lx-music-mobile/releases')
+    void openUrl('https://github.com/evecus/lx-music/releases')
   }
   const openFAQPage = () => {
     void openUrl('https://lyswhut.github.io/lx-music-doc/mobile/faq')
   }
-  // const openIssuesPage = () => {
-  //   openUrl('https://github.com/lyswhut/lx-music-mobile/issues')
-  // }
   const openPactModal = () => {
     showPactModal()
   }
   const openPartPage = () => {
-    void openUrl('https://github.com/lyswhut/lx-music-mobile#%E9%A1%B9%E7%9B%AE%E5%8D%8F%E8%AE%AE')
+    void openUrl('https://github.com/evecus/lx-music#%E9%A1%B9%E7%9B%AE%E5%8D%8F%E8%AE%AE')
   }
-
-  // const goToQQGroup = () => {
-  //   openUrl(qqGroupUrl).catch(() => {
-  //     void openUrl(qqGroupWebUrl)
-  //   })
-  // }
-  // const goToQQGroup2 = () => {
-  //   openUrl(qqGroupUrl2).catch(() => {
-  //     void openUrl(qqGroupWebUrl2)
-  //   })
-  // }
 
   const textLinkStyle = {
     ...styles.text,
     textDecorationLine: 'underline',
     color: theme['c-primary-font'],
-    // fontSize: 14,
   } as const
 
 
@@ -65,7 +45,7 @@ export default memo(() => {
       <View style={styles.part}>
         <Text style={styles.text} >本软件完全免费，代码已开源。开源地址：</Text>
         <TouchableOpacity onPress={openHomePage}>
-          <Text style={textLinkStyle}>https://github.com/lyswhut/lx-music-mobile</Text>
+          <Text style={textLinkStyle}>https://github.com/evecus/lx-music</Text>
         </TouchableOpacity>
       </View>
       <View style={styles.part}>
