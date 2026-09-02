@@ -254,20 +254,49 @@ jobs:
           NPM_CACHE: ${{ env.NPM_CACHE }}
         uses: ./.github/actions/setup
 
+      - name: Cache Electron binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+          key: electron-linux-${{ hashFiles('package-lock.json') }}-40.9.2
+          restore-keys: |
+            electron-linux-
+
       - name: Build src code
         run: npm run build
 
-      - name: Package Linux
+      - name: Package Linux (with retry)
         run: |
-          npm run pack:linux:deb:amd64
-          npm run pack:linux:deb:arm64
-          npm run pack:linux:deb:armv7l
-          npm run pack:linux:appImage
-          npm run pack:linux:rpm
-          npm run pack:linux:pacman
+          set -e
+          retry() {
+            local max=3
+            local n=1
+            local delay=15
+            until "$@"; do
+              if [ "$n" -ge "$max" ]; then
+                echo "Command failed after $max attempts: $*"
+                return 1
+              fi
+              echo "Attempt $n/$max failed, retrying in ${delay}s: $*"
+              n=$((n + 1))
+              sleep "$delay"
+              delay=$((delay * 2))
+            done
+          }
+
+          retry npm run pack:linux:deb:amd64
+          retry npm run pack:linux:deb:arm64
+          retry npm run pack:linux:deb:armv7l
+          retry npm run pack:linux:appImage
+          retry npm run pack:linux:rpm
+          retry npm run pack:linux:pacman
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BT_TOKEN: ${{ secrets.BT_TOKEN }}
+          ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+          ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
 
       - name: Generate file MD5
         run: |
