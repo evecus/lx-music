@@ -89,7 +89,8 @@ jobs:
         if: steps.compare.outputs.should_run == 'true'
         run: |
           if git ls-remote --exit-code --heads origin sources; then
-            git checkout sources
+            git fetch origin sources
+            git checkout -B sources origin/sources
           else
             git checkout --orphan sources
             git rm -rf . || true
@@ -211,12 +212,19 @@ jobs:
         if: steps.compare.outputs.should_run == 'true'
         run: |
           TAG="${{ steps.release.outputs.tag }}"
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
 
-          # 切回默认分支
-          git checkout -
+          # 显式切回默认分支（避免 git checkout - 在 orphan 分支后失败）
+          git fetch origin "$DEFAULT_BRANCH"
+          git checkout -B "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH"
 
           echo "$TAG" > .last_synced_tag
           git add .last_synced_tag
-          git commit -m "chore: update last synced tag to ${TAG}"
-          git push origin HEAD
-          echo "✅ .last_synced_tag 已更新为 ${TAG}"
+
+          if git diff --cached --quiet; then
+            echo "✅ .last_synced_tag 无需更新"
+          else
+            git commit -m "chore: update last synced tag to ${TAG}"
+            git push origin "$DEFAULT_BRANCH"
+            echo "✅ .last_synced_tag 已更新为 ${TAG}"
+          fi
