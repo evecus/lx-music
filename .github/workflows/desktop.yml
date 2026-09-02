@@ -1,0 +1,291 @@
+name: Build desktop
+
+on:
+  workflow_dispatch:
+
+env:
+  IS_CI: 'true'
+
+permissions:
+  contents: write
+
+jobs:
+  # ── 源码压缩包 ──────────────────────────────────────────────────────────
+  Source:
+    name: Source code zip
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: desktop
+          fetch-depth: 0
+
+      - name: Get version
+        id: ver
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Pack source code
+        run: |
+          git archive --format=zip --prefix=lx-music-desktop/ -o desktop-code.zip HEAD
+          ls -lh desktop-code.zip
+
+      - name: Upload source to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: lx-music v${{ steps.ver.outputs.version }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+          files: desktop-code.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Windows ─────────────────────────────────────────────────────────────
+  Windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: desktop
+          fetch-depth: 0
+
+      - name: Get version
+        id: ver
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get npm cache directory
+        shell: pwsh
+        run: echo "NPM_CACHE=$(npm config get cache)" >> $env:GITHUB_ENV
+
+      - name: Setup Node Env
+        env:
+          NPM_CACHE: ${{ env.NPM_CACHE }}
+        uses: ./.github/actions/setup
+
+      - name: Build src code
+        run: npm run build
+
+      - name: Package Windows
+        run: |
+          npm run pack:win:7z:x64
+          npm run pack:win:7z:arm64
+          npm run pack:win:setup:arm64
+          npm run pack:win:setup:x64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BT_TOKEN: ${{ secrets.BT_TOKEN }}
+
+      - name: Generate file MD5
+        run: |
+          cd build
+          Get-FileHash *.exe,*.7z -Algorithm MD5 | Format-List
+
+      - name: Upload Windows to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: lx-music v${{ steps.ver.outputs.version }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+          files: |
+            build/*.exe
+            build/*.7z
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Windows 7 ───────────────────────────────────────────────────────────
+  Windows_7:
+    name: Windows 7
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: desktop
+          fetch-depth: 0
+
+      - name: Get version
+        id: ver
+        shell: bash
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get npm cache directory
+        shell: pwsh
+        run: echo "NPM_CACHE=$(npm config get cache)" >> $env:GITHUB_ENV
+
+      - name: Setup Node Env
+        env:
+          NPM_CACHE: ${{ env.NPM_CACHE }}
+        uses: ./.github/actions/setup
+
+      - name: Prepare win7 undici env
+        run: |
+          npm install undici@5
+          Set-Content -Path .\src\common\utils\request.ts -Value "export * from './request_node16'"
+
+      - name: Build src code
+        env:
+          BUILD_WIN7: true
+        run: npm run build
+
+      - name: Prepare win7 electron env
+        run: |
+          npm install electron@22
+          pip.exe install setuptools
+
+      - name: Package Windows 7
+        run: |
+          npm run pack:win7:setup:x64
+          npm run pack:win7:7z:x64
+          npm run pack:win7:7z:x86
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BT_TOKEN: ${{ secrets.BT_TOKEN }}
+
+      - name: Generate file MD5
+        run: |
+          cd build
+          Get-FileHash *.exe,*.7z -Algorithm MD5 | Format-List
+
+      - name: Upload Windows 7 to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: lx-music v${{ steps.ver.outputs.version }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+          files: |
+            build/*win7*.exe
+            build/*win7*.7z
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── macOS ───────────────────────────────────────────────────────────────
+  Mac:
+    name: macOS
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: desktop
+          fetch-depth: 0
+
+      - name: Get version
+        id: ver
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Install python setuptools
+        run: brew install python-setuptools
+
+      - name: Get npm cache directory
+        shell: bash
+        run: echo "NPM_CACHE=$(npm config get cache)" >> "$GITHUB_ENV"
+
+      - name: Setup Node Env
+        env:
+          NPM_CACHE: ${{ env.NPM_CACHE }}
+        uses: ./.github/actions/setup
+
+      - name: Build src code
+        run: npm run build
+
+      - name: Package macOS
+        run: |
+          npm run pack:mac:dmg
+          npm run pack:mac:dmg:arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BT_TOKEN: ${{ secrets.BT_TOKEN }}
+
+      - name: Generate file MD5
+        run: |
+          cd build
+          md5 *.dmg || md5sum *.dmg
+
+      - name: Upload macOS to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: lx-music v${{ steps.ver.outputs.version }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+          files: build/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ── Linux ───────────────────────────────────────────────────────────────
+  Linux:
+    name: Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install system packages
+        run: sudo apt-get update && sudo apt-get install -y rpm libarchive-tools
+
+      - uses: actions/checkout@v4
+        with:
+          ref: desktop
+          fetch-depth: 0
+
+      - name: Get version
+        id: ver
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Get npm cache directory
+        shell: bash
+        run: echo "NPM_CACHE=$(npm config get cache)" >> "$GITHUB_ENV"
+
+      - name: Setup Node Env
+        env:
+          NPM_CACHE: ${{ env.NPM_CACHE }}
+        uses: ./.github/actions/setup
+
+      - name: Build src code
+        run: npm run build
+
+      - name: Package Linux
+        run: |
+          npm run pack:linux:deb:amd64
+          npm run pack:linux:deb:arm64
+          npm run pack:linux:deb:armv7l
+          npm run pack:linux:appImage
+          npm run pack:linux:rpm
+          npm run pack:linux:pacman
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BT_TOKEN: ${{ secrets.BT_TOKEN }}
+
+      - name: Generate file MD5
+        run: |
+          cd build
+          md5sum *.deb *.rpm *.pacman *.AppImage 2>/dev/null || true
+
+      - name: Upload Linux to Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.ver.outputs.version }}
+          name: lx-music v${{ steps.ver.outputs.version }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: false
+          files: |
+            build/*.deb
+            build/*.rpm
+            build/*.pacman
+            build/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
