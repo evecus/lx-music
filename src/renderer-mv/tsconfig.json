@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "isolatedModules": true,
+    "paths": {
+      "@common/*": ["../common/*"],
+      "@mv/*": ["../renderer-mv/*"],
+      "@static/*": ["../static/*"],
+      "@root/*": ["../*"]
+    },
+    "typeRoots": [
+      "./types"
+    ]
+  }
+}
