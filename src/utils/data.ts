@@ -567,15 +567,17 @@ export const addUserApi = async(script: string, groupId?: string): Promise<LX.Us
   return apiInfo
 }
 export const removeUserApi = async(ids: string[]) => {
-  if (!userApis) return []
-  const _ids: string[] = []
-  for (let index = userApis.length - 1; index > -1; index--) {
-    if (ids.includes(userApis[index].id)) {
-      _ids.push(`${userApiPrefix}${userApis[index].id}`)
-      userApis.splice(index, 1)
-      ids.splice(index, 1)
-    }
-  }
+if (!userApis) return []
+const _ids: string[] = []
+for (let index = userApis.length - 1; index > -1; index--) {
+if (ids.includes(userApis[index].id)) {
+_ids.push(`${userApiPrefix}${userApis[index].id}`)
+userApis.splice(index, 1)
+// 注意：这里绝不能再动 ids（旧代码误写成 ids.splice(index, 1)，
+// 用 userApis 的下标去删调用方数组里的元素，会把还没匹配到的 id 提前删掉，
+// 导致部分子源漏删，成为"分组记录已删但子源还在"的孤儿，表现为幽灵聚合分组）
+}
+}
   await saveData(userApiPrefix, userApis)
   if (_ids.length) await removeDataMultiple(_ids)
   return [...userApis]
@@ -596,11 +598,13 @@ export const getUserApiGroupList = async(): Promise<LX.UserApi.UserApiGroupInfo[
   return [...userApiGroups]
 }
 export const addUserApiGroup = async(info: LX.UserApi.UserApiGroupInfo) => {
+  await getUserApiGroupList() // 先同步一次最新数据，避免与启动时的分组检查更新等并发流程互相覆盖
   userApiGroups.push(info)
   await saveData(userApiGroupPrefix, userApiGroups)
   return [...userApiGroups]
 }
 export const updateUserApiGroup = async(id: string, patch: Partial<LX.UserApi.UserApiGroupInfo>) => {
+  await getUserApiGroupList()
   const target = userApiGroups.find(g => g.id == id)
   if (!target) return [...userApiGroups]
   Object.assign(target, patch)
@@ -608,11 +612,18 @@ export const updateUserApiGroup = async(id: string, patch: Partial<LX.UserApi.Us
   return [...userApiGroups]
 }
 export const removeUserApiGroup = async(id: string) => {
+  await getUserApiGroupList()
   const index = userApiGroups.findIndex(g => g.id == id)
   if (index < 0) return [...userApiGroups]
   userApiGroups.splice(index, 1)
   await saveData(userApiGroupPrefix, userApiGroups)
   return [...userApiGroups]
+}
+// 查询某个聚合分组下实际存在的所有子源 id（以子源自带的 groupId 为准，
+// 不依赖分组记录里可能已经过时/不全的 apiIds）
+export const getUserApiIdsByGroup = async(groupId: string): Promise<string[]> => {
+  const apis = await getUserApiList()
+  return apis.filter(api => api.groupId === groupId).map(api => api.id)
 }
 
 export const getLastSelectQuality = async(): Promise<LX.Quality> => {
