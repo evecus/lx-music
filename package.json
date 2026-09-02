@@ -1,7 +1,7 @@
 {
   "name": "lx-music-mobile",
-  "version": "1.8.4",
-  "versionCode": 76,
+  "version": "1.0.1",
+  "versionCode": 101,
   "private": true,
   "scripts": {
     "dev": "react-native run-android --active-arch-only",
@@ -28,21 +28,21 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lyswhut/lx-music-mobile.git"
+    "url": "git+https://github.com/evecus/lx-music.git"
   },
   "keywords": [
     "music-player",
     "react-native-app"
   ],
   "author": {
-    "name": "lyswhut",
+    "name": "evecus",
     "email": "lyswhut@qq.com"
   },
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/lyswhut/lx-music-mobile/issues"
+    "url": "https://github.com/evecus/lx-music/issues"
   },
-  "homepage": "https://github.com/lyswhut/lx-music-mobile#readme",
+  "homepage": "https://github.com/evecus/lx-music#readme",
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.1.1",
     "@react-native-async-storage/async-storage": "~2.1.2",
