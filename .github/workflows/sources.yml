@@ -1,4 +1,4 @@
-name: Sync LX Music Sources
+name: get lx music sources
 
 on:
   schedule:
