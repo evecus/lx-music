@@ -1,7 +1,10 @@
-name: build mobile
+name: Build mobile
 
 on:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   Android:
@@ -36,7 +39,12 @@ jobs:
       - name: Get package version
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $GITHUB_ENV
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> "$GITHUB_ENV"
+
+      - name: Pack source code
+        run: |
+          git archive --format=zip --prefix=lx-music-mobile/ -o mobile-code.zip HEAD
+          ls -lh mobile-code.zip
 
       - name: Generate file MD5
         run: |
@@ -58,5 +66,6 @@ jobs:
           fail_on_unmatched_files: false
           files: |
             android/app/build/outputs/apk/release/*.apk
+            mobile-code.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
