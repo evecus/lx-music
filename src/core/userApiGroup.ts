@@ -22,7 +22,7 @@
 import { httpFetch } from '@/utils/request'
 import { toast } from '@/utils/tools'
 import { action } from '@/store/userApi'
-import { importUserApi, removeUserApi } from '@/core/userApi'
+import { importUserApi, removeUserApi, setUserApiList } from '@/core/userApi'
 import { setApiSource } from '@/core/apiSource'
 import settingState from '@/store/setting/state'
 import {
@@ -30,6 +30,8 @@ import {
   addUserApiGroup,
   updateUserApiGroup,
   removeUserApiGroup,
+  getUserApiList,
+  getUserApiIdsByGroup,
 } from '@/utils/data'
 
 const GROUP_CHECK_INTERVAL = 24 * 60 * 60 * 1000 // 24 小时
@@ -117,9 +119,15 @@ export const importUserApiGroup = async (url: string) => {
 export const removeUserApiGroupWithSources = async (groupId: string) => {
   const groups = await getUserApiGroupList()
   const group = groups.find((g) => g.id === groupId)
-  if (!group) return
-  await removeUserApi(group.apiIds)
-  await removeUserApiGroup(group.id)
+
+  // 待删成员 = 分组记录里的 apiIds ∪ 实际挂着该 groupId 的所有子源。
+  // 即使分组记录缺失或 apiIds 不全（历史版本 bug 遗留的孤儿数据），
+  // 也能把这一批子源删干净，保证分组行的 X 按钮始终有效
+  const memberIds = new Set(group?.apiIds ?? [])
+  for (const id of await getUserApiIdsByGroup(groupId)) memberIds.add(id)
+
+  if (memberIds.size) await removeUserApi([...memberIds])
+  if (group) await removeUserApiGroup(group.id)
   action.setUserApiGroupList(await getUserApiGroupList())
 }
 
@@ -155,10 +163,13 @@ const checkAndUpdateGroup = async (group: LX.UserApi.UserApiGroupInfo): Promise<
     return
   }
 
-  const wasActiveSourceInOldGroup = group.apiIds.includes(settingState.setting['common.apiSource'])
+  // 用子源实际挂的 groupId 查出旧分组的全部成员，
+  // 不依赖记录里可能过时/不全的 apiIds，避免旧子源漏删变成孤儿
+  const oldMemberIds = await getUserApiIdsByGroup(group.id)
+  const wasActiveSourceInOldGroup = oldMemberIds.includes(settingState.setting['common.apiSource'])
 
   // 新源建好后，删除旧的这批（其在 UserApiInfo 列表和分组记录里的引用一并清理）
-  await removeUserApi(group.apiIds)
+  await removeUserApi(oldMemberIds)
   await removeUserApiGroup(group.id)
 
   const newGroupInfo: LX.UserApi.UserApiGroupInfo = {
@@ -181,11 +192,27 @@ const checkAndUpdateGroup = async (group: LX.UserApi.UserApiGroupInfo): Promise<
 }
 
 /**
- * App 启动时调用：后台静默检查所有聚合源分组是否有更新，不阻塞启动流程。
+ * 启动时数据自愈：清理“挂了 groupId 但分组记录已不存在”的孤儿子源。
+ * 历史版本的 bug（删除分组时误删待删 id 列表）可能遗留这类子源，
+ * 表现为列表里出现一个名为 user_api_group_xxx_yyy 的“幽灵分组”且 X 按钮删不掉。
+ */
+const reconcileOrphanGroupSources = async (): Promise<void> => {
+  const groups = await getUserApiGroupList()
+  const groupIds = new Set(groups.map(g => g.id))
+  const apis = await getUserApiList()
+  const orphanIds = apis.filter(api => api.groupId && !groupIds.has(api.groupId)).map(api => api.id)
+  if (!orphanIds.length) return
+  await removeUserApi(orphanIds)
+  setUserApiList(await getUserApiList())
+}
+
+/**
+ * App 启动时调用：先自愈一次脏数据，再后台静默检查所有聚合源分组是否有更新，不阻塞启动流程。
  * 各分组按各自 lastCheckTime 独立节流，互不影响；单个分组检查失败不影响其余分组。
  */
 export const checkUserApiGroupUpdateOnLaunch = () => {
   void (async () => {
+    await reconcileOrphanGroupSources()
     const groups = await getUserApiGroupList()
     action.setUserApiGroupList(groups)
     for (const group of groups) {
