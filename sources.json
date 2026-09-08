@@ -1,13 +1,14 @@
 {
-  "version": "V260817补充更新",
+  "version": "V260908",
   "name": "优质聚合源",
   "sources": [
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/HYWmusic_beta_%E5%85%AC%E7%9B%8A%E6%B5%8B%E8%AF%95.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/K%C3%97H%E6%B5%8B%E8%AF%95%20v1.7.17.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/lx-%E7%8E%89%E5%AE%81%E7%86%99V1.2.2.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/xinghai-music-sourcev2.3.11.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%A2%A8%E6%BE%9C%E9%9F%B3%E4%B9%90%E6%BA%90v2.3.0.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%B1%BF%E6%BA%AA-%E7%BB%88%E7%AB%A0.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E7%8B%AC%E5%AE%B6%E9%9F%B3%E6%BA%90V5.js" }
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/lx-玉宁熙V1.2.2.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/全豆要-聚合音源-V4.1（酷狗挂了）.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/墨澜音乐源v2.3.0.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/屿溪-终章.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/幻音音源 v3.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/念心音源 v1.0.2.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/统一音乐源.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/me/𝖧౿ᥣᥣ𝗈 Ԝ𝗈𝗋ᥣᑯ260809.js" }
   ]
 }
