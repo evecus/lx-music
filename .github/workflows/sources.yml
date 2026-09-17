@@ -132,10 +132,8 @@ jobs:
           done < <(find "/tmp/lxmusic_extracted/$TOP_DIR" -maxdepth 1 -mindepth 1 -type d -print0)
 
           if [ -z "$RECOMMEND_DIR" ]; then
-            echo "❌ 未找到「推荐」文件夹，退出"
-            echo "现有子目录："
-            ls -la "/tmp/lxmusic_extracted/$TOP_DIR/"
-            exit 1
+            echo "⚠️ 未找到「推荐」文件夹，改为使用顶层目录的所有 .js 文件"
+            RECOMMEND_DIR="/tmp/lxmusic_extracted/$TOP_DIR"
           fi
 
           echo "Found 推荐 dir: $RECOMMEND_DIR"
