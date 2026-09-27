@@ -1,5 +1,5 @@
 {
-  "version": "V260925",
+  "version": "V260926",
   "name": "优质聚合源",
   "sources": [
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/HYWmusic_%E5%85%AC%E7%9B%8A%E7%89%88_v1.0.3.js" },
@@ -8,7 +8,6 @@
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/lx-%E7%8E%89%E5%AE%81%E7%86%991.2.5.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/stellarwave-v3.2.0.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/stellarwave-v4.0.0%EF%BC%88%E9%85%B7%E6%88%91%E7%A8%8D%E5%90%8E%E6%94%AF%E6%8C%81%EF%BC%89.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/xinghai-music-sourcev2.3.13.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%85%A8%E8%B1%86%E8%A6%81-%E8%81%9A%E5%90%88%E9%9F%B3%E6%BA%90-V4.1%EF%BC%88%E9%85%B7%E7%8B%97%E6%8C%82%E4%BA%86%EF%BC%89.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%9B%9E%E9%81%BF%E8%81%9A%E5%90%88V0.0.1.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%A2%A8%E6%BE%9C%E9%9F%B3%E4%B9%90%E6%BA%90v2.3.4.js" },
@@ -16,6 +15,7 @@
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%B9%BB%E9%9F%B3%E9%9F%B3%E6%BA%90%20v3.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%BF%B5%E5%BF%83%E9%9F%B3%E6%BA%90%20v1.0.2.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E6%94%B6%E9%9B%86%E3%81%AE%E8%81%9A%E5%90%88%E6%8E%A5%E5%8F%A3.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E6%98%9F%E6%B5%B7%E9%9F%B3%E4%B9%90%E6%BA%90v2.3.14.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E6%BA%AF%E9%9F%B3%E9%9F%B3%E6%BA%90_v1.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E7%8B%AC%E5%AE%B6%E9%9F%B3%E6%BA%90-v6%20%28%E4%BF%AE%E5%A4%8D%29.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E7%A8%B3%E5%AE%9A%E7%89%88%E9%9F%B3%E6%BA%90%20v1.0.3.js" },
