@@ -125,7 +125,7 @@ jobs:
           while IFS= read -r -d '' dir; do
             dirname=$(basename "$dir")
             echo "Checking dir: $dirname"
-            if echo "$dirname" | grep -q "推荐"; then
+            if echo "$dirname" | grep -q "优质"; then
               RECOMMEND_DIR="$dir"
               break
             fi
