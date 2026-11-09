@@ -1,13 +1,12 @@
 {
-  "version": "V261107",
+  "version": "V261108",
   "name": "优质聚合源",
   "sources": [
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/HYWmusic_%E5%85%AC%E7%9B%8A%E7%89%88V1.2.0.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/HelloWorld%E9%9F%B3%E6%BA%90%28%E4%B8%AD%E7%A7%8B%E5%BF%AB%E4%B9%90%29.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%9B%9E%E9%81%BF%E8%81%9A%E5%90%88V0.0.1.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%A2%A8%E6%BE%9C%E9%9F%B3%E4%B9%90%E6%BA%90v2.3.6.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E5%AE%89%E5%A6%AE%E7%8B%AC%E5%AE%B6%E9%9F%B3%E6%BA%90%20v5.js" },
-  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E6%98%9F%E6%B5%B7%E9%9F%B3%E4%B9%90%E6%BA%90%20v2.3.17.js" },
+  { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E6%98%9F%E6%B5%B7%E9%9F%B3%E4%B9%90%E6%BA%90%20v2.3.18.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E7%8B%AC%E5%AE%B6%E9%9F%B3%E6%BA%90-v7.js" },
   { "url": "https://cdn.jsdelivr.net/gh/evecus/lx-music@sources/%E8%A3%A4%E4%BD%ACSVIP%E9%9F%B3%E6%BA%90%28%E4%BA%8C%E6%94%B9%E6%95%B4%E5%90%88%E7%89%88%29%20v3.0.0.js" }
   ]
